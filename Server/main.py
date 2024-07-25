@@ -17,7 +17,7 @@ def main():
             cv2.putText(processed_frame, f"Action: {action}", (10, 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        cv2.imshow('Air Drawing Action Detection', processed_frame)
+        cv2.imshow('Blackboard AI', processed_frame)
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
