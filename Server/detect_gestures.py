@@ -1,6 +1,3 @@
-import cv2
-import cv2 as cv
-import mediapipe as mp
 
 
 #
@@ -21,6 +18,7 @@ import mediapipe as mp
 import cv2
 import mediapipe as mp
 import numpy as np
+from draw import Draw
 
 
 class ActionDetector:
@@ -29,14 +27,18 @@ class ActionDetector:
         self.hands = self.mp_hands.Hands(
             static_image_mode=False,
             max_num_hands=1,
-            min_detection_confidence=0.5,
+            min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
         self.mp_drawing = mp.solutions.drawing_utils
         self.actions = ["draw", "erase","clear"]
         self.prev_hand_landmarks = None
+        self.draw = None
 
     def detect_action(self, frame):
+        if self.draw is None:
+            self.draw = Draw(frame.shape)
+
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.hands.process(frame_rgb)
 
@@ -53,6 +55,7 @@ class ActionDetector:
 
             # Update previous landmarks
             self.prev_hand_landmarks = hand_landmarks
+        frame = self.draw.draw(frame,action,hand_landmarks if results.multi_hand_landmarks else None,self.mp_hands)
 
         return frame, action
 
@@ -66,7 +69,7 @@ class ActionDetector:
             return "draw"
         if self._is_open_palm(hand_landmarks):
             return "erase"
-        if self._all_fingers_close(hand_landmarks):
+        if self._all_fingersclose(hand_landmarks):
             return "clear"
         return None
 
@@ -86,7 +89,7 @@ class ActionDetector:
         return all(hand_landmarks.landmark[tip].y < wrist.y for tip in fingertips)
 
 
-    def _all_fingers_close(self, hand_landmarks):
+    def _all_fingersclose(self, hand_landmarks):
         fingertips = [
             self.mp_hands.HandLandmark.THUMB_TIP,
             self.mp_hands.HandLandmark.INDEX_FINGER_TIP,
