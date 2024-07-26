@@ -13,7 +13,7 @@ CORS(app)
 frame_queue = queue.Queue(maxsize=10)
 action_queue = queue.Queue(maxsize=10)
 
-def gen_frames():
+def gen_frame():
     while True:
         frame = frame_queue.get()
         _, buffer = cv.imencode('.jpg',frame)
@@ -24,7 +24,7 @@ def gen_frames():
 
 @app.route('/video')
 def video():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
 @app.route('/get_action')
 def get_action():
     action = action_queue.get()
