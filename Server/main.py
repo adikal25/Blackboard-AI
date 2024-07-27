@@ -20,7 +20,7 @@ def main():
 
         processed_frame, action = detector.detect_action(frame)
 
-        # Use the DrawingManager to handle drawing
+
         output_frame = draw.draw(processed_frame, action,
                                             detector.prev_hand_landmarks,
                                             detector.mp_hands)
