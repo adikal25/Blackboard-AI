@@ -1,6 +1,7 @@
 import cv2 as cv
 import numpy as np
 
+
 class Draw:
     def __init__(self, frame_shape):
         self.canvas = np.zeros(frame_shape, dtype=np.uint8)

@@ -5,65 +5,39 @@ from detect_gestures import ActionDetector
 from draw import Draw
 import threading
 import queue
-import time
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app)
 
 # Global variables
-frame_queue = queue.Queue(maxsize=100000000000000000)
-action_queue = queue.Queue(maxsize=100000000000000000)
+frame_queue = queue.Queue(maxsize=10)
+action_queue = queue.Queue(maxsize=10)
 
 def gen_frame():
     while True:
         frame = frame_queue.get()
-        _, buffer = cv.imencode('.jpg', frame)
+        _, buffer = cv.imencode('.jpg',frame)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
-@app.route('/')
-def index():
-    return 'Hello World!'
 
 @app.route('/video')
 def video():
     return Response(gen_frame(), mimetype='multipart/x-mixed-replace; boundary=frame')
-
 @app.route('/get_action')
 def get_action():
-    if not action_queue.empty():
-        action = action_queue.get()
-        return jsonify({"action": action})
-    return jsonify({"action": None})
-
+    action = action_queue.get()
+    return jsonify(({"action":action}))
 def process_frames():
-    cap = cv.VideoCapture(0)
-    if not cap.isOpened():
-        app.logger.error("Failed to open camera")
-        return
-
-    detector = ActionDetector()
-    draw = None
+    cap=cv.VideoCapture(1)
+    detector=ActionDetector()
+    draw=None
 
     while True:
-        if not cap.isOpened():
-            app.logger.info("Reopening camera...")
-            cap = cv.VideoCapture(0)
-            if not cap.isOpened():
-                app.logger.error("Failed to reopen camera, retrying in 5 seconds")
-                time.sleep(5)
-                continue
-
         ret, frame = cap.read()
         if not ret:
-            app.logger.warning("Failed to capture image, attempting to reopen camera")
-            cap.release()
-            cap = cv.VideoCapture(0)
-            if not cap.isOpened():
-                app.logger.error("Failed to reopen camera")
-                break
-            continue
+            break
 
         frame = cv.flip(frame, 1)
 
@@ -72,8 +46,12 @@ def process_frames():
 
         processed_frame, action = detector.detect_action(frame)
         output_frame = draw.draw(processed_frame, action,
-                                detector.prev_hand_landmarks,
-                                detector.mp_hands)
+                                            detector.prev_hand_landmarks,
+                                            detector.mp_hands)
+
+        if action:
+            cv.putText(output_frame, f"Action: {action}", (10, 30),
+                        cv.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
         if not frame_queue.full():
             frame_queue.put(output_frame)
@@ -82,8 +60,8 @@ def process_frames():
 
     cap.release()
 
-if __name__ == '__main__':
+
     processing_thread = threading.Thread(target=process_frames)
     processing_thread.daemon = True
     processing_thread.start()
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+
